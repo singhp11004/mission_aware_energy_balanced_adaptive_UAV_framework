@@ -103,6 +103,7 @@ class UAVSimulation:
             "messages_sent": 0,
             "dummy_messages": 0,
             "successful_traces": 0,
+            "trace_attempts": 0,
             "total_latency": 0
         }
         
@@ -123,7 +124,7 @@ class UAVSimulation:
         
         for sender in senders:
             # Send real message
-            latency = self._send_message(sender, routing_depth, encryption_rounds)
+            latency = self._send_message(sender, routing_depth, encryption_rounds, round_stats)
             if latency > 0:
                 round_stats["messages_sent"] += 1
                 round_stats["total_latency"] += latency
@@ -138,7 +139,7 @@ class UAVSimulation:
         
         return round_stats
         
-    def _send_message(self, sender, routing_depth: int, encryption_rounds: int) -> float:
+    def _send_message(self, sender, routing_depth: int, encryption_rounds: int, round_stats: Dict = None) -> float:
         """Send a message from sender to command server through relays"""
         start_time = time.time()
         
@@ -192,6 +193,11 @@ class UAVSimulation:
         trace_result = self.adversary.attempt_trace(message.to_dict(), drone_ids)
         self.metrics.record_trace_result(trace_result["success"])
         
+        if round_stats is not None:
+            round_stats["trace_attempts"] += 1
+            if trace_result["success"]:
+                round_stats["successful_traces"] += 1
+        
         # Deliver to command server
         self.swarm.command_server.receive_message(message.to_dict())
         
@@ -217,13 +223,18 @@ class UAVSimulation:
         
         avg_latency = (round_stats["total_latency"] / round_stats["messages_sent"] 
                        if round_stats["messages_sent"] > 0 else 0)
+                       
+        # Calculate per-round trace success rate
+        round_trace_success = (round_stats["successful_traces"] / round_stats["trace_attempts"] 
+                              if round_stats["trace_attempts"] > 0 else 0)
         
         self.metrics.record_round(
             round_num=round_num,
             phase=self.privacy.current_phase,
             battery_stats=battery_stats,
             messages_sent=round_stats["messages_sent"],
-            trace_success_rate=adversary_stats["overall_success_rate"],
+            dummy_messages=round_stats["dummy_messages"],
+            trace_success_rate=round_trace_success,
             avg_latency=avg_latency
         )
         
@@ -250,7 +261,11 @@ class UAVSimulation:
         
         # Adversary analysis
         adversary_stats = self.adversary.get_statistics()
+        successful_traces = int(adversary_stats['trace_attempts'] * adversary_stats['overall_success_rate'])
+        
         print("\n🔒 Privacy Analysis (Adversary Performance):")
+        print(f"  • Total trace attempts: {adversary_stats['trace_attempts']}")
+        print(f"  • Successful traces: {successful_traces}")
         print(f"  • Overall trace success rate: {adversary_stats['overall_success_rate']:.2%}")
         
         privacy_eff = summary.get('privacy_effectiveness', {})

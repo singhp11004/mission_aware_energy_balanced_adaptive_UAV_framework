@@ -1,0 +1,19 @@
+Privacy-Energy Tradeoff Analysis
+
+This scatter plot illustrates the cost of privacy in terms of energy consumption.
+
+**Visualization Details**
+- **X-Axis**: Energy Consumption per Round (% battery drop).
+- **Y-Axis**: Privacy Score (calculated as 1 - Trace Success Rate). Higher is better.
+- **Points**: Each point represents a simulation round, colored by the mission phase.
+
+**Interpretation**
+- **Ideal Scenario**: High Privacy Score with Low Energy Consumption (top-left corner).
+- **Real-World Tradeoff**: Typically, higher privacy (top of the Y-axis) requires higher energy expenditure (right of the X-axis).
+- **Phases**:
+    - **Green points (Patrol)** should cluster towards the bottom-left (lower energy, potentially lower privacy requirements).
+    - **Red points (Threat)** should appear towards the top-right (high privacy, high cost).
+
+**Correctness Check**
+- If points are randomly scattered without any correlation, the adaptive mechanism might not be effectively trading energy for privacy.
+- A positive correlation (upward slope) indicates that the system is successfully "buying" privacy with energy.

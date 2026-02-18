@@ -23,6 +23,7 @@ class MetricsCollector:
         
     def record_round(self, round_num: int, phase: str, 
                      battery_stats: Dict, messages_sent: int,
+                     dummy_messages: int,
                      trace_success_rate: float, avg_latency: float):
         """Record metrics for a simulation round"""
         round_data = {
@@ -32,6 +33,7 @@ class MetricsCollector:
             "battery_min": battery_stats["min"],
             "active_drones": battery_stats["active_count"],
             "messages_sent": messages_sent,
+            "dummy_messages": dummy_messages,
             "trace_success_rate": trace_success_rate,
             "avg_latency": avg_latency
         }
@@ -340,6 +342,118 @@ class GraphGenerator:
         plt.savefig(os.path.join(self.output_dir, save_name), dpi=150)
         plt.close()
         
+    def plot_latency_by_phase(self, phase_metrics: Dict[str, List],
+                              save_name: str = "latency_by_phase.png"):
+        """Plot average latency by mission phase"""
+        fig, ax = plt.subplots(figsize=(10, 6))
+        
+        phases = [MissionPhase.PATROL, MissionPhase.SURVEILLANCE, MissionPhase.THREAT]
+        colors = ['green', 'orange', 'red']
+        avg_latencies = []
+        plot_phases = []
+        
+        for phase in phases:
+            if phase in phase_metrics and phase_metrics[phase]:
+                metrics = phase_metrics[phase]
+                # Calculate simple average of latencies in this phase
+                total_latency = sum(m["avg_latency"] for m in metrics)
+                count = len(metrics)
+                avg = total_latency / count if count > 0 else 0
+                avg_latencies.append(avg)
+                plot_phases.append(phase)
+            else:
+                avg_latencies.append(0)
+                plot_phases.append(phase)
+                
+        bars = ax.bar(plot_phases, avg_latencies, color=colors, alpha=0.7)
+        
+        ax.set_ylabel('Average Latency (ms)')
+        ax.set_title('Communication Latency by Mission Phase')
+        ax.grid(axis='y', alpha=0.3)
+        
+        # Add value labels
+        for bar in bars:
+            height = bar.get_height()
+            ax.text(bar.get_x() + bar.get_width()/2., height,
+                    f'{height:.1f} ms',
+                    ha='center', va='bottom')
+            
+        plt.tight_layout()
+        plt.savefig(os.path.join(self.output_dir, save_name), dpi=150)
+        plt.close()
+
+    def plot_traffic_composition(self, round_metrics: List[Dict],
+                                 save_name: str = "traffic_composition.png"):
+        """Plot composition of real vs dummy traffic over time"""
+        fig, ax = plt.subplots(figsize=(12, 6))
+        
+        rounds = [m["round"] for m in round_metrics]
+        real_msgs = [m["messages_sent"] for m in round_metrics]
+        dummy_msgs = [m.get("dummy_messages", 0) for m in round_metrics]
+        
+        # Stackplot
+        ax.stackplot(rounds, real_msgs, dummy_msgs, 
+                     labels=['Real Messages', 'Dummy Traffic'],
+                     colors=['#3498db', '#95a5a6'], alpha=0.8)
+        
+        ax.set_xlabel('Simulation Round')
+        ax.set_ylabel('Messages per Round')
+        ax.set_title('Network Traffic Composition: Real vs Dummy')
+        ax.legend(loc='upper left')
+        ax.grid(True, alpha=0.3)
+        
+        plt.tight_layout()
+        plt.savefig(os.path.join(self.output_dir, save_name), dpi=150)
+        plt.close()
+
+    def plot_energy_consumption_rate(self, phase_metrics: Dict[str, List],
+                                     save_name: str = "energy_consumption_rate.png"):
+        """Plot energy consumption rate per round by phase"""
+        fig, ax = plt.subplots(figsize=(10, 6))
+        
+        phases = [MissionPhase.PATROL, MissionPhase.SURVEILLANCE, MissionPhase.THREAT]
+        colors = ['green', 'orange', 'red']
+        consumption_rates = []
+        plot_phases = []
+        
+        for phase in phases:
+            if phase in phase_metrics and phase_metrics[phase]:
+                metrics = phase_metrics[phase]
+                if len(metrics) < 2:
+                    consumption_rates.append(0)
+                    plot_phases.append(phase)
+                    continue
+                    
+                # Calculate total drop in this phase
+                start_battery = metrics[0]["battery_mean"]
+                end_battery = metrics[-1]["battery_mean"]
+                total_drop = start_battery - end_battery
+                
+                # Rate per round
+                rate = total_drop / len(metrics) if len(metrics) > 0 else 0
+                consumption_rates.append(rate)
+                plot_phases.append(phase)
+            else:
+                consumption_rates.append(0)
+                plot_phases.append(phase)
+                
+        bars = ax.bar(plot_phases, consumption_rates, color=colors, alpha=0.7)
+        
+        ax.set_ylabel('Avg Battery Drain per Round (%)')
+        ax.set_title('Energy Consumption Rate by Mission Phase')
+        ax.grid(axis='y', alpha=0.3)
+        
+        # Add value labels
+        for bar in bars:
+            height = bar.get_height()
+            ax.text(bar.get_x() + bar.get_width()/2., height,
+                    f'{height:.2f}%',
+                    ha='center', va='bottom')
+            
+        plt.tight_layout()
+        plt.savefig(os.path.join(self.output_dir, save_name), dpi=150)
+        plt.close()
+
     def generate_all_plots(self, metrics: MetricsCollector, relay_usage: List[int]):
         """Generate all visualization plots"""
         print("Generating visualization plots...")
@@ -352,12 +466,23 @@ class GraphGenerator:
             self.plot_privacy_energy_tradeoff(metrics.phase_metrics)
             print("  ✓ Privacy-energy tradeoff plot")
             
+            # New plots requiring phase metrics
+            self.plot_latency_by_phase(metrics.phase_metrics)
+            print("  ✓ Latency by phase plot")
+            
+            self.plot_energy_consumption_rate(metrics.phase_metrics)
+            print("  ✓ Energy consumption rate plot")
+            
         if metrics.round_metrics:
             self.plot_trace_success_by_phase(metrics.round_metrics)
             print("  ✓ Trace success by phase plot")
             
             self.plot_swarm_lifetime(metrics.round_metrics)
             print("  ✓ Swarm lifetime plot")
+            
+            # New plots requiring round metrics
+            self.plot_traffic_composition(metrics.round_metrics)
+            print("  ✓ Traffic composition plot")
             
         if relay_usage:
             self.plot_relay_fairness(relay_usage)

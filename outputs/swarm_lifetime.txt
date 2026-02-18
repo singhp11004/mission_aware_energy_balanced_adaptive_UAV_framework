@@ -1,0 +1,17 @@
+Swarm Lifetime and Battery Status
+
+This graph tracks the overall health of the swarm over the mission duration.
+
+**Visualization Details**
+- **Blue Line (Left Axis)**: Number of Active Drones.
+- **Green Line (Right Axis)**: Mean Battery Level (%) of the swarm.
+- **Red Dashed Line**: The 50% active threshold (critical failure point).
+
+**Interpretation**
+- **Active Drones**: Should remain constant at the total swarm size (e.g., 50) for most of the mission, then drop as batteries deplete.
+- **Mean Battery**: Should decrease linearly or super-linearly over time.
+- **Lifetime**: The point where the Blue line crosses a critical threshold (often defined as 50% or 30% surviving drones) marks the effective network lifetime.
+
+**Correctness Check**
+- If the Active Drones count drops immediately at the start, there is likely an initialization bug or extreme energy cost setting.
+- If Mean Battery stays flat, the energy model is not decrementing correctly.

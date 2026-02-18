@@ -1,0 +1,17 @@
+Relay Fairness and Load Balancing Analysis
+
+This visualization assesses how evenly the workload of relaying messages is distributed among the drones.
+
+**Left Panel: Distribution of Relay Usage**
+- A histogram showing how many drones have handled a specific count of relay requests.
+- **Interpretation**: A bell-shaped curve centered around the mean indicates good load balancing. A skew with many drones at 0 usage and a few with very high usage suggests poor balancing (some nodes are bottlenecks).
+
+**Right Panel: Lorenz Curve**
+- A graphical representation of inequality.
+- The **Red Dashed Line** represents perfect equality (everyone relays the exact same amount).
+- The **Blue Line** is the actual distribution.
+- **Gini Coefficient**: A number between 0 (perfect equality) and 1 (extreme inequality).
+- **Interpretation**: The closer the Blue curve is to the Red diagonal, the fairer the load balancing. A large "bow" indicates that a small subset of drones is doing most of the work.
+
+**Correctness Check**
+- If the Gini coefficient is high (> 0.6), check the relay selection logic. It might be biased towards specific nodes (e.g., those formed in a central cluster).

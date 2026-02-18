@@ -117,12 +117,14 @@ class SenderEstimator:
             estimated = random.choice(all_drone_ids) if all_drone_ids else None
             confidence = 1.0 / len(all_drone_ids) if all_drone_ids else 0
             
+        success = (estimated == actual_sender and confidence >= TRACE_SUCCESS_THRESHOLD)
+            
         self.estimation_attempts.append({
             "actual_sender": actual_sender,
             "estimated_sender": estimated,
             "confidence": confidence,
             "hop_count": hop_count,
-            "success": estimated == actual_sender
+            "success": success
         })
         
         return estimated, confidence

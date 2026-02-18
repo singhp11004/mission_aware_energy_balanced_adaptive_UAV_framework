@@ -1,0 +1,17 @@
+Adversary Trace Success Analysis
+
+This visualization evaluates the vulnerability of the network to traffic analysis attacks.
+
+**Left Panel: Adversary Trace Success Over Time**
+- Scatter plot of trace success (1 = successful trace, 0 = failed attempt) or rate per round.
+- **Interpretation**: Dense clusters of low values indicate effective privacy protection. High values mean the adversary is successfully correlating traffic.
+
+**Right Panel: Privacy Vulnerability by Mission Phase**
+- Bar chart showing the Average Trace Success Rate for each phase.
+- **Interpretation**: 
+    - **PATROL**: May have higher trace success if privacy is relaxed to save energy.
+    - **THREAT**: Should have the *lowest* trace success rate, as the system should be prioritizing privacy (random walks, dummy traffic) over efficiency.
+
+**Correctness Check**
+- If the THREAT phase has a higher trace success rate than PATROL, the adaptive privacy mechanism is failing (or the adversary is getting stronger/closer).
+- We expect to see: Patrol (High Risk) > Surveillance > Threat (Low Risk/High Privacy).

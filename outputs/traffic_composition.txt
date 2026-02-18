@@ -1,0 +1,18 @@
+Network Traffic Composition: Real vs. Dummy
+
+This stackplot shows the volume and type of traffic flowing through the network.
+
+**Visualization Details**
+- **X-Axis**: Simulation Round.
+- **Y-Axis**: Total Messages per Round.
+- **Blue Area**: Real data messages (telemetry, command & control).
+- **Grey Area**: Dummy traffic (chaff/noise injected for privacy).
+
+**Interpretation**
+- **Baseline**: The Blue area represents the actual mission data requirements.
+- **Privacy Injection**: The Grey area shows when the system injects fake traffic to confuse the adversary.
+- **Phase Correlation**: You should see spikes in the grey area (Dummy Traffic) during the **THREAT** phase or when privacy scores drop, and lower amounts during **PATROL**.
+
+**Correctness Check**
+- If Dummy Traffic is always zero, the `DummyTrafficGenerator` is not triggering.
+- If Dummy Traffic overwhelms Real Messages permanently, the energy budget will be depleted too quickly.

@@ -1,0 +1,16 @@
+Energy Consumption Rate by Mission Phase
+
+This bar chart compares the average battery drain per round during different mission phases.
+
+**Visualization Details**
+- **X-Axis**: Mission Phases (PATROL, SURVEILLANCE, THREAT).
+- **Y-Axis**: Average Battery Drain per Round (percentage points).
+- **Colors**: Green (Patrol), Orange (Surveillance), Red (Threat).
+
+**Interpretation**
+- **PATROL**: Typically shows the lowest energy consumption as the swarm focuses on longevity and basic covering. Privacy measures are likely lighter.
+- **SURVEILLANCE**: Moderate energy consumption. Standard sensing and operational traffic.
+- **THREAT**: Should show the highest energy consumption due to aggressive privacy preservation techniques (high dummy traffic, complex routing) and frequent status updates.
+
+**Correctness Check**
+- The bars should logically follow the mission intensity: Patrol < Surveillance < Threat. If Threat phase has lower consumption than Patrol, verify if the dummy traffic or routing depth parameters are correctly configured for the Threat phase.

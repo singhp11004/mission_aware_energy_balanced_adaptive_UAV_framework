@@ -1,0 +1,16 @@
+Communication Latency by Mission Phase
+
+This graph analyzes the delay in message delivery across different mission phases.
+
+**Visualization Details**
+- **X-Axis**: Mission Phases (PATROL, SURVEILLANCE, THREAT).
+- **Y-Axis**: Average Latency (milliseconds).
+
+**Interpretation**
+- **PATROL**: latency might be lower if routing paths are shorter, or higher if the network is sparse (less connectivity).
+- **SURVEILLANCE**: Baseline latency for standard operations.
+- **THREAT**: Expected to have the highest latency due to privacy mechanisms like multi-hop routing (longer paths) and potentially processing delays for stronger encryption or timing jitters.
+
+**Correctness Check**
+- A significantly high latency in the THREAT phase confirms that privacy-enhancing routing (like Random Walk or multi-hop relays) is active.
+- If latency is identical across all phases, the adaptive routing logic might not be triggering correctly.
