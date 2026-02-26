@@ -89,8 +89,12 @@ class SenderEstimator:
         relay_path = message_data.get("relay_path", [])
         hop_count = message_data.get("hop_count", 0)
         
-        # Simulation: Higher hops = harder to trace
-        base_difficulty = min(1.0, hop_count * 0.15)
+        # Simulation: Higher hops = exponentially harder to trace
+        # 1 hop: 0.30 difficulty → ~70% traceable
+        # 2 hops: 0.51 difficulty → ~49% traceable
+        # 3 hops: 0.66 difficulty → ~34% traceable
+        # 5 hops: 0.83 difficulty → ~17% base (near 0% with dummy traffic)
+        base_difficulty = 1 - (0.7 ** hop_count) if hop_count > 0 else 0
         
         # Check if we can observe the first relay
         if relay_path:
@@ -98,8 +102,9 @@ class SenderEstimator:
             # Analyze first relay's activity pattern
             pattern = self.observer.analyze_traffic_pattern(first_relay)
             
-            # High regularity might leak information
-            pattern_leak = pattern["regularity_score"] * 0.2
+            # High regularity might leak information, but impact is
+            # diminished by deep routing (more hops = less leak)
+            pattern_leak = pattern["regularity_score"] * 0.15 / (1 + hop_count * 0.3)
         else:
             pattern_leak = 0.3  # Direct transmission is very traceable
             

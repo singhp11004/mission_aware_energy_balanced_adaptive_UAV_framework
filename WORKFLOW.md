@@ -61,7 +61,20 @@ The simulation will print progress to the console, including:
     - Relay Fairness
     - Verification of graph generation.
 
-## 4. Configuration
+## 4. Running the Interactive Dashboard
+
+For a visual, real-time experience:
+
+```bash
+streamlit run app.py
+```
+
+This will launch a web interface where you can:
+-   Watch the swarm operate in **God Mode** or **Adversary Mode**.
+-   Trigger events like **Decoy Deployment** and **EMP Blasts**.
+-   Monitor real-time metrics for privacy and energy.
+
+## 5. Configuration
 
 Project settings can be modified in `config.py`. Key parameters include:
 
@@ -70,7 +83,7 @@ Project settings can be modified in `config.py`. Key parameters include:
 - **MESSAGES_PER_ROUND**: Number of messages generated per round.
 - **PHASE_CHANGE_INTERVAL**: How often the mission phase updates.
 
-## 5. Outputs & Visualization
+## 6. Outputs & Visualization
 
 Upon completion, the simulation generates results in the `outputs/` directory.
 
@@ -84,7 +97,7 @@ Upon completion, the simulation generates results in the `outputs/` directory.
 - **Traffic Composition**: Stacked area chart visualising the ratio of real vs. dummy noise traffic.
 - **Energy Consumption Rate**: Bar chart showing how fast battery drains in each mission phase.
 
-## 6. Interpreting Results
+## 7. Interpreting Results
 
 - **Trace Success Rate**: A lower trace success rate indicates better privacy.
 - **0% Trace Success**: In high-security phases (like `THREAT`), it is expected to see **0% trace success**. This means the privacy measures (5-hop routing, dummy traffic, jitter) were sufficient to reduce the adversary's confidence below their actionable threshold. It does **not** mean the simulation is broken; it means the defense is working.

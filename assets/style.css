@@ -1,0 +1,49 @@
+
+/* Dark Theme Overrides */
+.stApp {
+    background-color: #0E1117;
+    color: #FAFAFA;
+}
+
+/* Sidebar styling */
+[data-testid="stSidebar"] {
+    background-color: #1E1E1E;
+    border-right: 1px solid #333;
+}
+
+/* Metrics Cards */
+[data-testid="stMetricValue"] {
+    font-family: 'Courier New', monospace;
+    font-weight: bold;
+    color: #00FF00; /* Neon Green */
+}
+
+/* Button Styling (Hollow Neon) */
+div.stButton > button {
+    border: 1px solid #00FF00;
+    color: #00FF00;
+    background-color: transparent;
+    border-radius: 5px;
+    font-family: 'Courier New', monospace;
+    transition: all 0.3s ease;
+}
+
+div.stButton > button:hover {
+    background-color: #00FF00;
+    color: #000;
+    box-shadow: 0 0 10px #00FF00;
+}
+
+/* Red Button Variant (for countermeasures) */
+div.stButton > button.red-btn {
+    border: 1px solid #FF0000;
+    color: #FF0000;
+}
+
+/* Custom "Code" font for logs */
+.log-entry {
+    font-family: 'Courier New', monospace;
+    font-size: 12px;
+    padding: 2px 0;
+    border-bottom: 1px dotted #333;
+}

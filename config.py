@@ -13,11 +13,17 @@ LOW_BATTERY_THRESHOLD = 20.0  # Percentage
 CRITICAL_BATTERY_THRESHOLD = 10.0  # Percentage
 
 # Energy Cost Constants (in percentage units)
-ENERGY_ENCRYPTION = 0.5
-ENERGY_RE_ENCRYPTION = 0.3
-ENERGY_TRANSMISSION = 0.2
-ENERGY_DUMMY_TRAFFIC = 0.1
-ENERGY_RECEPTION = 0.05
+# Tuned so that 50 drones survive ~100 rounds at PATROL pace
+ENERGY_ENCRYPTION = 0.15
+ENERGY_RE_ENCRYPTION = 0.08
+ENERGY_TRANSMISSION = 0.05
+ENERGY_DUMMY_TRAFFIC = 0.03
+ENERGY_RECEPTION = 0.02
+ENERGY_ECDH_EXCHANGE = 0.08      # Key exchange cost
+ENERGY_HMAC = 0.01              # HMAC computation
+ENERGY_SIGNING = 0.06           # Ed25519 signing
+ENERGY_HASHING = 0.005          # SHA-3 hashing
+ENERGY_CHACHA20 = 0.10          # ChaCha20 (lighter than AES)
 
 # Mission Phases
 class MissionPhase:
@@ -45,6 +51,28 @@ MISSION_CONFIG = {
         "timing_jitter_ms": 200,
         "encryption_rounds": 3
     }
+}
+
+# Cryptographic Configuration per Mission Phase
+CRYPTO_CONFIG = {
+    MissionPhase.PATROL: {
+        "cipher": "AES-256-GCM",
+        "hmac": False,
+        "sign": False,
+        "description": "Standard authenticated encryption",
+    },
+    MissionPhase.SURVEILLANCE: {
+        "cipher": "AES-256-GCM",
+        "hmac": True,
+        "sign": True,
+        "description": "Full auth + integrity + signatures",
+    },
+    MissionPhase.THREAT: {
+        "cipher": "ChaCha20-Poly1305",
+        "hmac": True,
+        "sign": True,
+        "description": "Max security — lightweight AEAD + dual auth",
+    },
 }
 
 # Relay Selection Parameters

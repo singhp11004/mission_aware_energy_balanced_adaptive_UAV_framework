@@ -84,4 +84,21 @@ The simulation consistently demonstrates the effectiveness of the adaptive appro
     ```
 4.  **View Results**: Check the console output and the `outputs/` directory for generated graphs.
 
+## 🎮 Interactive Dashboard (New!)
+
+Experience the simulation in real-time with our "Mission Control" dashboard.
+
+1.  **Install additional dependencies**:
+    ```bash
+    pip install -r requirements.txt
+    ```
+2.  **Launch the dashboard**:
+    ```bash
+    streamlit run app.py
+    ```
+3.  **Features**:
+    *   **Twin Perspectives**: Toggle between *God Mode* (full visibility) and *Adversary Mode* (intercepted traffic).
+    *   **Active Countermeasures**: Deploy decoys or trigger EMP blasts to save the swarm.
+    *   **Real-time Telemetry**: Watch the adversary's confidence score rise and fall.
+
 For a detailed step-by-step guide, see [WORKFLOW.md](WORKFLOW.md).
