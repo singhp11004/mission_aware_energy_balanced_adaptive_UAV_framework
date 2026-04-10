@@ -49,15 +49,16 @@ python3 main.py --mode eval --rounds 100
 ### Expected Output
 The framework generates operational metrics continuously:
 
-1.  **Initialization**: Sets up the IPPO models, establishes Cryptography engines, and constructs Dijkstra route mappings through $P \cdot d^2$ signal decay constraints.
-2.  **Round Progression**: Updates every 10 rounds detailing:
-    - Active drone operational capability
+1.  **Initialization**: Sets up the IPPO models, establishes Cryptography engines, and constructs Dijkstra route mappings through $P \cdot d^2$ signal decay constraints. It identifies the 4-layer tactical stack initialization.
+2.  **Round Progression**: Console updates every 10 rounds detailing:
+    - Active drone count (Mission failure if < 3)
     - Average battery level persistence
-    - Operational lifecycle phase routing
-3.  **Final Telemetry Report**: The system culminates with a delivery summary:
-    - Network packet chunking volumes
-    - Trace rates representing adversary evasion successes
-    - Multipath deployment utilization against baseline IPPO-DM logic
+    - Operational lifecycle phase shifts (e.g. `SURVEILLANCE` -> `ENGAGEMENT`)
+3.  **Final Telemetry Report**: The system culminates with a "Z-MAPS RESULTS" summary:
+    - Total message chunks processed
+    - Delivery and Trace rates
+    - Multipath deployment utilization percentages
+    - Prioritization layer enhancement rates
 
 ## 4. IPPO-DM Training Mode
 

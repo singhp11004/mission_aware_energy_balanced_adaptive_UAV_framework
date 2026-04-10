@@ -1,6 +1,9 @@
-# Ultra-Premium Interactive UAV Simulation Design
+# Z-MAPS: Conceptual Roadmap for Interactive Simulation
 
-This final design iteration pushes the boundaries of web-based simulation, incorporating "Adversary View", 3D visualization, custom assets, and a "Gamified" operational mode.
+> [!NOTE]
+> This document outlines the **Future Vision** for the Z-MAPS project. While the current core engine is fully functional via CLI and static output generation, the following design serves as a roadmap for an ultra-premium, interactive web-based dashboard.
+
+This design iteration pushes the boundaries of web-based simulation, incorporating "Adversary View", 3D visualization, custom assets, and a "Gamified" operational mode.
 
 ## 1. Core Vision: "Twin Perspectives"
 

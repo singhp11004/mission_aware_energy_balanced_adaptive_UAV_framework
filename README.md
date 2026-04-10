@@ -53,12 +53,12 @@ The core research contribution replaces single-path relay chains with **learned 
 
 ## 🔄 5-Phase Operational Lifecycle
 
-| Phase | Threat | Routing | Multipath | Dummy Rate | Cipher |
+| Phase | Threat | Routing | Multipath | Dummy Rate | Cipher (AEAD) |
 |:---|:---:|:---:|:---:|:---:|:---|
 | 🚁 **TRANSIT** | 0.1 | 1 hop | ✗ | 5% | XChaCha20-Poly1305 |
 | 🟢 **PATROL** | 0.25 | 2 hops | ✗ | 10% | XChaCha20-Poly1305 |
-| 🟡 **SURVEILLANCE** | 0.55 | 3 hops | ✓ (2-path) | 30% | XChaCha20-Poly1305 + HMAC + Ed448 |
-| 🔴 **ENGAGEMENT** | 0.95 | 5 hops | ✓ (3-path) | 50% | ChaCha20-Poly1305 + HMAC + Ed448 |
+| 🟡 **SURVEILLANCE** | 0.55 | 3 hops | ✓ (2-path) | 30% | XChaCha20-Poly1305 + Ed448 |
+| 🔴 **ENGAGEMENT** | 0.95 | 5 hops | ✓ (3-path) | 50% | ChaCha20-Poly1305 + Ed448 |
 | 🔵 **RECOVERY** | 0.35 | 2 hops | ✓ (2-path) | 15% | XChaCha20-Poly1305 + HMAC |
 
 ---

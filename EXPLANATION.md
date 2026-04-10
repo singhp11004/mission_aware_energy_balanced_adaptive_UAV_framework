@@ -1,109 +1,76 @@
-# Simulation Explanation Guide: Mission-Aware UAV Framework
+# Z-MAPS Logic & Architecture: Technical Explanation Guide
 
-This guide explains the **Interactive Dashboard (`app.py`)** for the "Mission-Aware Energy-Balanced Adaptive Privacy Framework". Use this document to demonstrate the system's capabilities to your professor or peers.
-
----
-
-## 🚀 1. Overview
-The dashboard visualizes a swarm of **50 UAVs** (Unmanned Aerial Vehicles) performing a mission while defending against a sophisticated **Adversary**.
-
-**Key Goal:** Balance **Privacy** (avoiding detection) with **Energy Efficiency** (battery life) by dynamically adapting security protocols based on the **Mission Phase**.
+This guide provides a comprehensive technical breakdown of the **Z-MAPS** (Zero-Knowledge Multi-Agent Reinforcement Learning Framework for Mission-Aware Privacy) framework. It is intended to help you explain the system's underlying logic and autonomous decision-making processes.
 
 ---
 
-## 🎯 2. Dashboard Components
+## 🚀 1. The 4-Layer Tactical Engine
 
-### 🖥️ HUD (Heads-Up Display) - Top Bar
-*   **ROUND**: Current simulation step (1 round approx = 1-3 seconds real-time).
-*   **SCORE**: Points for successful message delivery. *Penalized* if traced.
-*   **PHASE**: Current mission state (PATROL 🟢 / SURVEILLANCE 🟡 / THREAT 🔴).
-    *   *See Section 3 for details.*
-*   **DRONES**: Operations status (Active / Total). If < 30% active, mission fails.
-*   **AVG BATTERY**: Fleet-wide average battery level.
-*   **TRACE SUCCESS**: The **Adversary's Success Rate**.
-    *   **High % (red)** = Bad. Adversary is successfully tracing messages.
-    *   **Low % (green)** = Good. Privacy measures are working.
+Z-MAPS operates through a decoupled, 4-layer mission-centric stack. Each layer has a specific tactical responsibility:
 
-### 🗺️ Tactical Map (Left Panel)
-*   **Nodes**: Individual drones.
-    *   **Green**: High battery (>70%).
-    *   **Yellow/Orange**: Medium battery.
-    *   **Red**: Critical battery (<15%).
-*   **Edges**: Communication links between drones.
-*   **Blue Diamond**: The **Command Server (CMD)**. All messages must reach here.
+### 📥 Layer 1: Data Acquisition & Noise-Free Fragmentation
+*   **Semantic Mapping:** Ingests raw telemetry and identifies the payload type (e.g., `PATROL`, `TARGET_ID`).
+*   **Recursive Segmentation:** To avoid the battery-draining overhead of traditional "padding" (adding empty bytes to make packets look the same size), Z-MAPS recursively shatters a single payload into random blocks sized between **50B and 1000B**. 
+*   **Result:** These fragments transit the network asynchronously, naturally obscuring the original message's size signature.
 
-### 🔐 Crypto Inspector (Right Panel)
-This panel proves that **real cryptography** is happening, not just a simulation number.
-*   **Cipher**: Shows the active encryption algorithm (e.g., `AES-256-GCM` or `ChaCha20-Poly1305`).
-*   **Plaintext**: The original message content (e.g., "Telemetry from Drone 12...").
-*   **Ciphertext**: The actual encrypted hex output.
-*   **Integrity Checks**:
-    *   **Nonce**: Unique number used once per message.
-    *   **Auth Tag**: MAC (Message Authentication Code) ensuring no tampering.
-    *   **Hash**: SHA3-256 fingerprint of the message.
-*   **ECDH Sessions**: Shows active **Diffie-Hellman Key Exchanges** between drones and the command server.
+### ⚖️ Layer 2: Semantic Prioritization
+*   **Priority Scoring:** Evaluates the urgency of each fragment. For example, a `TARGET_ID` packet in an `ENGAGEMENT` zone receives a maximum priority score.
+*   **Policy Recommendation:** Based on the priority and mission phase, this layer recommends a **Privacy Envelope**:
+    *   **Routing Depth:** How many relays to use?
+    *   **Multipath Splits:** How many parallel paths to split traffic across?
+    *   **Timing Jitter:** How much random delay to inject at each hop?
+
+### 🧠 Layer 3: Communication & IPPO-DM Routing
+*   **The Brain:** This is where the **IPPO-DM** (Independent Proximal Policy Optimization with Dirichlet Modeling) agent resides.
+*   **Traffic Splitting:** For high-priority traffic, the agent calculates optimal split ratios on the probability simplex. If $k=3$ paths are requested, the agent might decide to send 40% through Path A, 35% through Path B, and 25% through Path C based on local congestion and adversary activity.
+*   **Dijkstra $P \cdot d^2$ Chaining:** Relays are selected using a weighted Dijkstra algorithm where edge weights grow with the square of the distance ($d^2$) and the inverse of the relay's battery level.
+
+### 🏁 Layer 4: TOC (Tactical Operations Center) Integration
+*   **Reassembly:** The TOC server collects fragments, validates their integrity using **SHA3-512** hashes, and decrypts the final payload.
+*   **ACK Feedback:** Sends acknowledgments back to the source, completing the loop and recording system-wide delivery metrics.
 
 ---
 
-## 🔄 3. Adaptive Mission Phases
- The system automatically switches phases based on round number (or manual override).
+## 🔄 2. The 5-Phase Mission Lifecycle
 
-### 🟢 **PATROL Phase (Standard Security)**
-*   **Goal**: Save battery while maintaining basic security.
-*   **Crypto**: `AES-256-GCM` (Fast, hardware-accelerated).
-*   **Routing**: 2 Hops (Short paths).
-*   **Defense**: Low implementation (10% dummy traffic).
-*   **Result**: High trace rates (~80%), but very low energy cost.
+The swarm automatically adapts its security posture based on the mission context:
 
-### 🟡 **SURVEILLANCE Phase (High Security)**
-*   **Goal**: Increase protection as mission sensitivity rises.
-*   **Crypto**: `AES-256-GCM` + **HMAC-SHA256** (Double integrity check) + **Ed25519 Signatures** (Non-repudiation).
-*   **Routing**: 3 Hops (Harder to trace).
-*   **Defense**: Medium implementation (30% dummy traffic).
-*   **Result**: Trace rates drop to ~40-60%.
-
-### 🔴 **THREAT Phase (Maximum Privacy)**
-*   **Goal**: Zero tolerance for tracking. High energy cost accepted.
-*   **Crypto**: `ChaCha20-Poly1305` (Resistant to side-channel attacks) + HMAC + Signatures.
-*   **Routing**: 5 Hops (Deep onion routing).
-*   **Defense**: High implementation (50% dummy traffic).
-*   **Result**: **Trace Rate drops to near 0%**. The adversary is blind.
+1.  🚁 **TRANSIT:** Low-threat movement. Focuses on **maximum energy conservation**. (Single-path, minimal encryption).
+2.  🟢 **PATROL:** Baseline security. Standard multi-hop routing with low dummy traffic.
+3.  🟡 **SURVEILLANCE:** Elevated threat. Enables **IPPO-DM Multipath** (2 paths) and asymmetric signatures (**Ed448**).
+4.  🔴 **ENGAGEMENT:** Maximum privacy. Uses **3-parallel path routing**, maximum dummy injection, and **ChaCha20-Poly1305** for speed/security.
+5.  🔵 **RECOVERY:** Returning to base. Balances remaining battery against moderate security needs.
 
 ---
 
-## 🕵️ 4. The Adversary Logic
-The red "TRACE SUCCESS" metric is calculated based on:
-1.  **Hop Count**: More relays = harder to traceback to the source.
-2.  **Traffic Volume**: Constant traffic patterns are easier to analyze.
-3.  **Dummy Traffic**: Fake messages confuse the adversary's statistical models.
+## 🔐 3. Modernized Cryptographic Stack
 
-**Scoring:**
-*   **+20 Points**: Message delivered safely.
-*   **+30 Bonus**: Message delivered *without* being traced.
-*   **+5 Points**: Dummy message sent (strategic deception).
-*   **Phase Bonus**: Extra points for surviving high-threat phases.
+Z-MAPS utilizes bleeding-edge, quantum-resistant primitives:
+*   **XChaCha20-Poly1305:** Authenticated encryption with 192-bit nonces to prevent collision in high-velocity streams.
+*   **X448 Key Exchange:** Established session keys with 224-bit security strength (superior to standard P-256).
+*   **Ed448 Signatures:** Gold-standard identity verification for Command Server instructions.
+*   **SHA3-512:** Keccak-based hashing for absolute integrity validation.
 
 ---
 
-## 🎮 5. Gamification & Controls
-*   **Step / Play**: Step through rounds manually or auto-play.
-*   **Deploy Decoys**: Spends score to flood the network with fake messages, lowering adversary confidence.
-*   **EMP Blast**: Emergency measure. Costs massive score (1000 pts) but blindly resets the adversary's knowledge to zero.
-*   **Escalate Phase**: Manually force the swarm into THREAT mode to demonstrate high-security protocols.
+## 📊 4. Interpreting Output Metrics
+
+After a simulation run, check the `outputs/` folder for high-resolution performance analysis:
+
+*   **`privacy_energy_tradeoff.png`**: Look for the "Engagement" phase. You should see maximum privacy effectiveness (near 100%) but with a corresponding peak in energy cost per round.
+*   **`traffic_composition.png`**: Shows the "sea" of dummy packets. In high-threat phases, the volume of dummy traffic should significantly expand to bury the real data.
+*   **`relay_fairness.png`**: The Lorenz Curve and Gini coefficient. A low Gini coefficient (<0.2) means the framework is successfully distributing the load across all drones, preventing single-drone battery exhaustion.
+*   **`trace_success_by_phase.png`**: The goal is to see the trace rate drop as the mission progresses into higher phases.
 
 ---
 
-## 📝 6. How to Run for Demo
+## 🛠️ 5. Evaluation Command Reference
 
-1.  **Open Terminal**:
-    ```bash
-    streamlit run app.py
-    ```
-2.  **In Browser**:
-    *   Click **START** to watch the autonomous system.
-    *   Observe the **TRACE SUCCESS** drop as phases change.
-    *   Point out the **Crypto Inspector** showing live encryption.
-    *   Click **Deploy Decoys** to show active countermeasures.
+To run the Z-MAPS evaluation with pre-trained IPPO-DM weights:
+```bash
+python main.py --mode eval --rounds 100
+```
+This will yield a final "Z-MAPS RESULTS" summary in your terminal, detailing delivery rates, trace mitigation, and routing utilization.
 
 ---
-*Created for Professor Presentation - Mission-Aware Energy-Balanced Adaptive UAV Framework*
+*Technical Documentation — Mission-Aware Energy-Balanced Adaptive UAV Framework*
