@@ -97,6 +97,22 @@ class EnergyModel:
         usable_battery = max(0, battery_level - CRITICAL_BATTERY_THRESHOLD)
         return int(usable_battery / avg_cost) if avg_cost > 0 else 0
 
+    # ─────────────── Z-MAPS Multipath Extension ───────────────
+
+    def calculate_multipath_cost(self, mission_phase: str, num_paths: int,
+                                  is_sender: bool = True) -> float:
+        """
+        Calculate energy cost for multipath routing.
+
+        Each additional parallel path adds a small coordination overhead
+        on top of the base single-path cost.
+        """
+        from config import ENERGY_MULTIPATH_OVERHEAD
+
+        base = self.calculate_message_cost(mission_phase, is_sender)
+        overhead = ENERGY_MULTIPATH_OVERHEAD * max(0, num_paths - 1)
+        return base + overhead
+
 
 class BatteryManager:
     """Manages battery updates and tracking for drones"""

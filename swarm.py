@@ -55,16 +55,75 @@ class Drone:
 
 
 class CommandServer:
-    """Central command server for the swarm"""
-    
+    """Central command server for the swarm — with processing & ACK tracking."""
+
     def __init__(self):
         self.server_id = COMMAND_SERVER_ID
         self.received_messages: List[Dict] = []
         self.position = (0.5, 0.5)  # Center position
-        
-    def receive_message(self, message: Dict):
-        """Record received message"""
+
+        # ── stats ──
+        self.stats = {
+            "received": 0,
+            "processed": 0,
+            "integrity_ok": 0,
+            "integrity_fail": 0,
+            "acks_sent": 0,
+            "dropped": 0,          # from jamming / interception
+        }
+        self.round_stats: Dict[int, Dict] = {}   # per-round breakdown
+        self.ack_log: List[Dict] = []             # ACK records
+
+    def receive_message(self, message: Dict, round_num: int = 0):
+        """Record received message, process it, and prepare ACK."""
         self.received_messages.append(message)
+        self.stats["received"] += 1
+
+        # Integrity check (simulation: fail if re_encrypted flag missing
+        # on messages that went through relays)
+        integrity_ok = True
+        if message.get("hop_count", 0) > 0:
+            # Simulate: 2% random integrity failure
+            integrity_ok = random.random() > 0.02
+        if message.get("is_dummy", False):
+            integrity_ok = True  # Dummy always passes (no real payload)
+
+        if integrity_ok:
+            self.stats["processed"] += 1
+            self.stats["integrity_ok"] += 1
+        else:
+            self.stats["integrity_fail"] += 1
+
+        # Send ACK back to sender
+        ack = {
+            "msg_id": message.get("message_id", "?"),
+            "sender_id": message.get("sender_id"),
+            "round": round_num,
+            "status": "ACK" if integrity_ok else "NACK",
+        }
+        self.ack_log.append(ack)
+        self.stats["acks_sent"] += 1
+
+        # Per-round tracking
+        rs = self.round_stats.setdefault(round_num, {
+            "received": 0, "processed": 0,
+            "integrity_fail": 0, "acks": 0, "dropped": 0,
+        })
+        rs["received"] += 1
+        rs["processed"] += int(integrity_ok)
+        rs["integrity_fail"] += int(not integrity_ok)
+        rs["acks"] += 1
+
+        return {"status": "ACK" if integrity_ok else "NACK", "integrity_ok": integrity_ok}
+
+    def record_drop(self, round_num: int = 0):
+        """Record a message that was dropped (jammed / intercepted)."""
+        self.stats["dropped"] += 1
+        rs = self.round_stats.setdefault(round_num, {
+            "received": 0, "processed": 0,
+            "integrity_fail": 0, "acks": 0, "dropped": 0,
+        })
+        rs["dropped"] += 1
 
 
 class UAVSwarm:
@@ -105,6 +164,30 @@ class UAVSwarm:
         
         # Store positions in graph
         nx.set_node_attributes(self.network, positions, 'pos')
+        
+        self.update_edge_weights()
+
+    def update_edge_weights(self):
+        """Update edge weights dynamically based on distance to simulate energy cost W = (d^2) / battery."""
+        pos = nx.get_node_attributes(self.network, 'pos')
+        for u, v in self.network.edges():
+            pos_u = pos[u]
+            pos_v = pos[v]
+            
+            # calculate distance squared
+            d_sq = (pos_u[0] - pos_v[0])**2 + (pos_u[1] - pos_v[1])**2
+            
+            # approximate transmission power P cost factor
+            P_cost = max(0.0001, d_sq * 100) # scale up slightly
+            
+            # battery factor: lower battery means higher perceived cost to relay
+            battery_u = self.drones[u].battery_level if u in self.drones else 100
+            battery_v = self.drones[v].battery_level if v in self.drones else 100
+            
+            battery_factor = max(1.0, (battery_u + battery_v) / 2)
+            weight = P_cost / (battery_factor / 100.0)
+            
+            self.network[u][v]['weight'] = weight
         
         # Ensure connectivity to command server
         self._ensure_server_connectivity()
@@ -152,10 +235,21 @@ class UAVSwarm:
             drone.mission_state = phase
             
     def update_round(self):
-        """Update swarm state for new round"""
+        """Update swarm state for new round: timers, movement, and weights"""
         self.round_number += 1
+        pos = nx.get_node_attributes(self.network, 'pos')
+        new_pos = {}
         for drone in self.drones.values():
             drone.update_cooldown()
+            # Random movement jitter
+            x, y = drone.position
+            nx_val, ny_val = x + random.uniform(-0.02, 0.02), y + random.uniform(-0.02, 0.02)
+            drone.position = (max(0.0, min(1.0, nx_val)), max(0.0, min(1.0, ny_val)))
+            new_pos[drone.drone_id] = drone.position
+            
+        new_pos[COMMAND_SERVER_ID] = self.command_server.position
+        nx.set_node_attributes(self.network, new_pos, 'pos')
+        self.update_edge_weights()
             
     def get_active_drones(self) -> List[Drone]:
         """Get list of currently active drones"""
@@ -179,3 +273,51 @@ class UAVSwarm:
         """Check if swarm is still operational"""
         active = len(self.get_active_drones())
         return active >= (self.num_drones * min_active_ratio)
+
+    # ─────────────────── Z-MAPS extensions ───────────────────
+
+    def get_neighbors_with_metrics(self, drone_id: int) -> List[Dict]:
+        """
+        Return neighbor drone IDs with their current battery and queue depth.
+        Used by the IPPO-DM environment for observation building.
+        """
+        neighbors = self.get_neighbors(drone_id)
+        result = []
+        for nid in neighbors:
+            if isinstance(nid, int) and nid in self.drones:
+                d = self.drones[nid]
+                result.append({
+                    "drone_id": nid,
+                    "battery": d.battery_level,
+                    "cooldown": d.cooldown_timer,
+                    "relay_count": d.relay_usage_count,
+                    "is_available": d.is_available(),
+                    "queue_depth": getattr(d, "_queue_depth", 0),
+                })
+        return result
+
+    def get_drone_state_vector(self, drone_id: int, max_neighbors: int = 10) -> List[float]:
+        """
+        Build a fixed-size observation vector for a single drone.
+        Compatible with the IPPO agent's obs_dim.
+        """
+        if drone_id not in self.drones:
+            return [0.0] * 32
+
+        drone = self.drones[drone_id]
+        obs = [0.0] * 32
+
+        # Own state
+        obs[0] = drone.battery_level / 100.0
+        obs[1] = min(drone.cooldown_timer / 10.0, 1.0)
+        obs[2] = min(drone.relay_usage_count / 50.0, 1.0)
+
+        # Neighbor batteries
+        neighbors = self.get_neighbors_with_metrics(drone_id)
+        for i, n in enumerate(neighbors[:max_neighbors]):
+            obs[3 + i] = n["battery"] / 100.0
+
+        # Active neighbor count
+        obs[20] = min(len(neighbors) / max_neighbors, 1.0)
+
+        return obs

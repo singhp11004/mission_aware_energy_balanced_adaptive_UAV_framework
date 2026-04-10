@@ -2,12 +2,12 @@
 Crypto Engine — Production-grade cryptographic systems for UAV swarm communication.
 
 Implements:
-  • ECDH (P-256)        — Ephemeral key exchange between drones
-  • AES-256-GCM         — Authenticated encryption (primary cipher)
+  • X448                — Ephemeral key exchange between drones
+  • XChaCha20-Poly1305  — Extended-nonce authenticated cryptography (Primary upgrade)
   • ChaCha20-Poly1305   — Lightweight AEAD for battery-constrained drones
-  • HMAC-SHA256         — Message integrity / authentication codes
-  • Ed25519             — Digital signatures for command authentication
-  • SHA-3 (Keccak-256)  — Cryptographic hashing / fingerprinting
+  • HMAC-SHA512         — Message integrity / authentication codes
+  • Ed448               — Digital signatures for command authentication
+  • SHA-3 (Keccak-512)  — Cryptographic hashing / fingerprinting
 """
 
 import os
@@ -24,11 +24,9 @@ from Crypto.Cipher import AES, ChaCha20_Poly1305
 from Crypto.Random import get_random_bytes
 
 # Python cryptography lib — asymmetric ciphers
-from cryptography.hazmat.primitives.asymmetric.ec import (
-    ECDH, EllipticCurvePublicKey, generate_private_key, SECP256R1,
-)
-from cryptography.hazmat.primitives.asymmetric.ed25519 import (
-    Ed25519PrivateKey, Ed25519PublicKey,
+from cryptography.hazmat.primitives.asymmetric.x448 import X448PrivateKey, X448PublicKey
+from cryptography.hazmat.primitives.asymmetric.ed448 import (
+    Ed448PrivateKey, Ed448PublicKey,
 )
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.kdf.hkdf import HKDF
@@ -79,21 +77,21 @@ class CryptoOpLog:
 
 
 # ─────────────────────────────────────────────────────────────
-#  1. ECDH Key Exchange (P-256 / secp256r1)
+#  1. X448 Key Exchange (Post-quantum capable sizes)
 # ─────────────────────────────────────────────────────────────
 
-class ECDHKeyPair:
-    """Elliptic-Curve Diffie-Hellman keypair for a single drone."""
+class X448KeyPair:
+    """X448 keypair for a single drone."""
 
     def __init__(self):
-        self._private = generate_private_key(SECP256R1())
+        self._private = X448PrivateKey.generate()
         self.public = self._private.public_key()
 
-    def derive_shared_secret(self, peer_public: EllipticCurvePublicKey) -> bytes:
-        """Derive 32-byte shared secret via ECDH + HKDF-SHA256."""
-        raw = self._private.exchange(ECDH(), peer_public)
+    def derive_shared_secret(self, peer_public: X448PublicKey) -> bytes:
+        """Derive 32-byte shared secret via X448 + HKDF-SHA512."""
+        raw = self._private.exchange(peer_public)
         return HKDF(
-            algorithm=hashes.SHA256(),
+            algorithm=hashes.SHA512(),
             length=32,
             salt=None,
             info=b"uav-swarm-session-key",
@@ -101,23 +99,24 @@ class ECDHKeyPair:
 
     def public_key_bytes(self) -> bytes:
         return self.public.public_bytes(
-            serialization.Encoding.X962,
-            serialization.PublicFormat.CompressedPoint,
+            serialization.Encoding.Raw,
+            serialization.PublicFormat.Raw,
         )
 
     def fingerprint(self) -> str:
         """Short hex fingerprint of the public key."""
-        return hashlib.sha3_256(self.public_key_bytes()).hexdigest()[:16]
+        return hashlib.sha3_512(self.public_key_bytes()).hexdigest()[:16]
 
 
 # ─────────────────────────────────────────────────────────────
-#  2. AES-256-GCM  (Authenticated Encryption)
+#  2. XChaCha20-Poly1305  (Extended Nonce Authenticated Encryption)
 # ─────────────────────────────────────────────────────────────
 
-def aes_gcm_encrypt(key: bytes, plaintext: bytes, aad: bytes = b"") -> Dict[str, str]:
-    """AES-256-GCM encrypt.  Returns {nonce, ciphertext, tag} as hex."""
-    nonce = get_random_bytes(12)
-    cipher = AES.new(key, AES.MODE_GCM, nonce=nonce)
+def xchacha_encrypt(key: bytes, plaintext: bytes, aad: bytes = b"") -> Dict[str, str]:
+    """XChaCha20-Poly1305 encrypt. Returns {nonce, ciphertext, tag} as hex."""
+    # 24-byte nonce forces XChaCha20 mode in PyCryptodome 
+    nonce = get_random_bytes(24)
+    cipher = ChaCha20_Poly1305.new(key=key, nonce=nonce)
     if aad:
         cipher.update(aad)
     ct, tag = cipher.encrypt_and_digest(plaintext)
@@ -128,15 +127,16 @@ def aes_gcm_encrypt(key: bytes, plaintext: bytes, aad: bytes = b"") -> Dict[str,
     }
 
 
-def aes_gcm_decrypt(key: bytes, bundle: Dict[str, str], aad: bytes = b"") -> bytes:
-    """AES-256-GCM decrypt + verify."""
-    cipher = AES.new(key, AES.MODE_GCM, nonce=bytes.fromhex(bundle["nonce"]))
+def xchacha_decrypt(key: bytes, bundle: Dict[str, str], aad: bytes = b"") -> bytes:
+    """XChaCha20-Poly1305 decrypt + verify."""
+    cipher = ChaCha20_Poly1305.new(key=key, nonce=bytes.fromhex(bundle["nonce"]))
     if aad:
         cipher.update(aad)
     return cipher.decrypt_and_verify(
         bytes.fromhex(bundle["ciphertext"]),
         bytes.fromhex(bundle["tag"]),
     )
+
 
 
 # ─────────────────────────────────────────────────────────────
@@ -168,29 +168,29 @@ def chacha_decrypt(key: bytes, bundle: Dict[str, str], aad: bytes = b"") -> byte
 
 
 # ─────────────────────────────────────────────────────────────
-#  4. HMAC-SHA256
+#  4. HMAC-SHA512
 # ─────────────────────────────────────────────────────────────
 
-def hmac_sha256(key: bytes, message: bytes) -> str:
-    """Compute HMAC-SHA256 and return hex digest."""
-    return hmac.new(key, message, hashlib.sha256).hexdigest()
+def hmac_sha512(key: bytes, message: bytes) -> str:
+    """Compute HMAC-SHA512 and return hex digest."""
+    return hmac.new(key, message, hashlib.sha512).hexdigest()
 
 
 def hmac_verify(key: bytes, message: bytes, expected_hex: str) -> bool:
     """Constant-time HMAC verification."""
-    computed = hmac.new(key, message, hashlib.sha256).hexdigest()
+    computed = hmac.new(key, message, hashlib.sha512).hexdigest()
     return hmac.compare_digest(computed, expected_hex)
 
 
 # ─────────────────────────────────────────────────────────────
-#  5. Ed25519 Digital Signatures
+#  5. Ed448 Digital Signatures
 # ─────────────────────────────────────────────────────────────
 
-class Ed25519Signer:
-    """Ed25519 keypair for signing / verification."""
+class Ed448Signer:
+    """Ed448 keypair for signing / verification."""
 
     def __init__(self):
-        self._private = Ed25519PrivateKey.generate()
+        self._private = Ed448PrivateKey.generate()
         self.public = self._private.public_key()
 
     def sign(self, data: bytes) -> str:
@@ -217,8 +217,8 @@ class Ed25519Signer:
 # ─────────────────────────────────────────────────────────────
 
 def sha3_hash(data: bytes) -> str:
-    """SHA-3 (Keccak-256) hash, hex."""
-    return hashlib.sha3_256(data).hexdigest()
+    """SHA-3 (Keccak-512) hash, hex."""
+    return hashlib.sha3_512(data).hexdigest()
 
 
 # ─────────────────────────────────────────────────────────────
@@ -230,8 +230,8 @@ class CryptoEngine:
     Unified cryptographic engine for the UAV swarm.
 
     Each drone gets:
-      • An ECDH keypair  (key exchange)
-      • An Ed25519 keypair  (signing)
+      • An X448 keypair  (key exchange)
+      • An Ed448 keypair  (signing)
 
     The engine mediates all encryption, signature, and integrity
     operations and logs everything for real-time dashboard display.
@@ -240,13 +240,13 @@ class CryptoEngine:
     # Algorithm selection per mission phase
     PHASE_CRYPTO = {
         "PATROL": {
-            "cipher": "AES-256-GCM",
+            "cipher": "XChaCha20-Poly1305",
             "hmac": False,
             "sign": False,
-            "description": "Standard authenticated encryption",
+            "description": "Extended-nonce authenticated encryption",
         },
         "SURVEILLANCE": {
-            "cipher": "AES-256-GCM",
+            "cipher": "XChaCha20-Poly1305",
             "hmac": True,
             "sign": True,
             "description": "Full authentication + integrity",
@@ -263,22 +263,22 @@ class CryptoEngine:
         self.log = CryptoOpLog()
 
         # Per-drone keypairs
-        self.ecdh_keys: Dict[int, ECDHKeyPair] = {}
-        self.signers: Dict[int, Ed25519Signer] = {}
+        self.ecdh_keys: Dict[int, X448KeyPair] = {}
+        self.signers: Dict[int, Ed448Signer] = {}
         self.session_keys: Dict[str, bytes] = {}  # "src-dst" -> 32 bytes
 
         for i in range(num_drones):
-            self.ecdh_keys[i] = ECDHKeyPair()
-            self.signers[i] = Ed25519Signer()
+            self.ecdh_keys[i] = X448KeyPair()
+            self.signers[i] = Ed448Signer()
 
         # Base station keys
-        self.ecdh_keys[-1] = ECDHKeyPair()  # CMD
-        self.signers[-1] = Ed25519Signer()
+        self.ecdh_keys[-1] = X448KeyPair()  # CMD
+        self.signers[-1] = Ed448Signer()
 
     # ─────────── key exchange ───────────
 
     def establish_session(self, src_id: int, dst_id: int) -> bytes:
-        """Perform ECDH key exchange between two nodes."""
+        """Perform X448 key exchange between two nodes."""
         t0 = time.perf_counter_ns()
         src_kp = self.ecdh_keys.get(src_id)
         dst_kp = self.ecdh_keys.get(dst_id)
@@ -289,7 +289,7 @@ class CryptoEngine:
         pair_key = f"{src_id}-{dst_id}"
         self.session_keys[pair_key] = shared
         self.log.record(
-            "KEY_EXCHANGE", "ECDH-P256",
+            "KEY_EXCHANGE", "X448",
             drone_id=src_id,
             key_hex=shared.hex(),
             extra={"peer": dst_id, "fingerprint": dst_kp.fingerprint()},
@@ -317,7 +317,7 @@ class CryptoEngine:
         t0 = time.perf_counter_ns()
         msg_hash = sha3_hash(plain_bytes)
         us = (time.perf_counter_ns() - t0) // 1000
-        self.log.record("HASH", "SHA3-256", drone_id=sender_id,
+        self.log.record("HASH", "SHA3-512", drone_id=sender_id,
                         input_hex=plain_bytes.hex()[:32],
                         output_hex=msg_hash, elapsed_us=us)
 
@@ -326,7 +326,7 @@ class CryptoEngine:
         if cfg["cipher"] == "ChaCha20-Poly1305":
             enc_bundle = chacha_encrypt(session_key, plain_bytes, aad)
         else:
-            enc_bundle = aes_gcm_encrypt(session_key, plain_bytes, aad)
+            enc_bundle = xchacha_encrypt(session_key, plain_bytes, aad)
         us = (time.perf_counter_ns() - t0) // 1000
         self.log.record(
             "ENCRYPT", cfg["cipher"], drone_id=sender_id,
@@ -340,9 +340,9 @@ class CryptoEngine:
         hmac_tag = ""
         if cfg["hmac"]:
             t0 = time.perf_counter_ns()
-            hmac_tag = hmac_sha256(session_key, enc_bundle["ciphertext"].encode())
+            hmac_tag = hmac_sha512(session_key, enc_bundle["ciphertext"].encode())
             us = (time.perf_counter_ns() - t0) // 1000
-            self.log.record("HMAC", "HMAC-SHA256", drone_id=sender_id,
+            self.log.record("HMAC", "HMAC-SHA512", drone_id=sender_id,
                             output_hex=hmac_tag, elapsed_us=us)
 
         # 5. Sign (optional)
@@ -354,7 +354,7 @@ class CryptoEngine:
                 signature = signer.sign(enc_bundle["ciphertext"].encode())
                 us = (time.perf_counter_ns() - t0) // 1000
                 self.log.record(
-                    "SIGN", "Ed25519", drone_id=sender_id,
+                    "SIGN", "Ed448", drone_id=sender_id,
                     output_hex=signature[:32],
                     extra={"pubkey": signer.public_key_hex()[:16]},
                     elapsed_us=us,
@@ -388,14 +388,14 @@ class CryptoEngine:
         # Verify HMAC
         if bundle.get("hmac"):
             if not hmac_verify(session_key, enc["ciphertext"].encode(), bundle["hmac"]):
-                self.log.record("HMAC_FAIL", "HMAC-SHA256", drone_id=receiver_id)
+                self.log.record("HMAC_FAIL", "HMAC-SHA512", drone_id=receiver_id)
                 return None
 
         # Verify signature
         if bundle.get("signature"):
             signer = self.signers.get(sender_id)
             if signer and not signer.verify(enc["ciphertext"].encode(), bundle["signature"]):
-                self.log.record("SIG_FAIL", "Ed25519", drone_id=receiver_id)
+                self.log.record("SIG_FAIL", "Ed448", drone_id=receiver_id)
                 return None
 
         # Decrypt
@@ -403,7 +403,7 @@ class CryptoEngine:
             if bundle["cipher"] == "ChaCha20-Poly1305":
                 plain = chacha_decrypt(session_key, enc, aad)
             else:
-                plain = aes_gcm_decrypt(session_key, enc, aad)
+                plain = xchacha_decrypt(session_key, enc, aad)
             return plain.decode("utf-8")
         except Exception:
             self.log.record("DECRYPT_FAIL", bundle["cipher"], drone_id=receiver_id)
@@ -425,10 +425,10 @@ class CryptoEngine:
             key = self.establish_session(sender_id, relay_id)
             aad = f"onion-layer:{sender_id}:{relay_id}".encode()
             t0 = time.perf_counter_ns()
-            enc = aes_gcm_encrypt(key, current, aad)
+            enc = xchacha_encrypt(key, current, aad)
             us = (time.perf_counter_ns() - t0) // 1000
             self.log.record(
-                "ONION_LAYER", "AES-256-GCM", drone_id=sender_id,
+                "ONION_LAYER", "XChaCha20-Poly1305", drone_id=sender_id,
                 output_hex=enc["ciphertext"][:24],
                 extra={"relay": relay_id, "layer": len(layers) + 1},
                 elapsed_us=us,
@@ -456,7 +456,7 @@ class CryptoEngine:
                 "id": did,
                 "label": label,
                 "ecdh_fp": kp.fingerprint(),
-                "ed25519_pk": self.signers[did].public_key_hex()[:16] if did in self.signers else "",
+                "ed448_pk": self.signers[did].public_key_hex()[:16] if did in self.signers else "",
             })
         return info
 
@@ -469,21 +469,21 @@ class CryptoEngine:
         """Run a comprehensive self-test of all crypto primitives."""
         results = {}
 
-        # 1. ECDH
+        # 1. X448
         try:
             k = self.establish_session(0, 1)
-            results["ECDH-P256"] = "✅ OK" if len(k) == 32 else "❌ FAIL"
+            results["X448"] = "✅ OK" if len(k) == 32 else "❌ FAIL"
         except Exception as e:
-            results["ECDH-P256"] = f"❌ {e}"
+            results["X448"] = f"❌ {e}"
 
-        # 2. AES-GCM roundtrip
+        # 2. XChaCha20-Poly1305 roundtrip
         try:
             key = get_random_bytes(32)
-            enc = aes_gcm_encrypt(key, b"hello world", b"aad")
-            dec = aes_gcm_decrypt(key, enc, b"aad")
-            results["AES-256-GCM"] = "✅ OK" if dec == b"hello world" else "❌ FAIL"
+            enc = xchacha_encrypt(key, b"hello world", b"aad")
+            dec = xchacha_decrypt(key, enc, b"aad")
+            results["XChaCha20-Poly1305"] = "✅ OK" if dec == b"hello world" else "❌ FAIL"
         except Exception as e:
-            results["AES-256-GCM"] = f"❌ {e}"
+            results["XChaCha20-Poly1305"] = f"❌ {e}"
 
         # 3. ChaCha20
         try:
@@ -497,26 +497,26 @@ class CryptoEngine:
         # 4. HMAC
         try:
             key = get_random_bytes(32)
-            tag = hmac_sha256(key, b"integrity test")
+            tag = hmac_sha512(key, b"integrity test")
             ok = hmac_verify(key, b"integrity test", tag)
-            results["HMAC-SHA256"] = "✅ OK" if ok else "❌ FAIL"
+            results["HMAC-SHA512"] = "✅ OK" if ok else "❌ FAIL"
         except Exception as e:
-            results["HMAC-SHA256"] = f"❌ {e}"
+            results["HMAC-SHA512"] = f"❌ {e}"
 
-        # 5. Ed25519
+        # 5. Ed448
         try:
             sig = self.signers[0].sign(b"sign me")
             ok = self.signers[0].verify(b"sign me", sig)
-            results["Ed25519"] = "✅ OK" if ok else "❌ FAIL"
+            results["Ed448"] = "✅ OK" if ok else "❌ FAIL"
         except Exception as e:
-            results["Ed25519"] = f"❌ {e}"
+            results["Ed448"] = f"❌ {e}"
 
         # 6. SHA-3
         try:
             h = sha3_hash(b"keccak test")
-            results["SHA3-256"] = "✅ OK" if len(h) == 64 else "❌ FAIL"
+            results["SHA3-512"] = "✅ OK" if len(h) == 128 else "❌ FAIL"
         except Exception as e:
-            results["SHA3-256"] = f"❌ {e}"
+            results["SHA3-512"] = f"❌ {e}"
 
         # 7. Full encrypt/decrypt roundtrip
         try:

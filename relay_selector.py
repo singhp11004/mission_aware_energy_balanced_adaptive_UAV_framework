@@ -4,13 +4,15 @@ Relay Selector Module - Energy-weighted probabilistic relay selection
 
 import random
 from typing import List, Dict, Optional, Tuple
-from config import COOLDOWN_PENALTY, COOLDOWN_DURATION, BATTERY_WEIGHT
+from config import COOLDOWN_PENALTY, COOLDOWN_DURATION, BATTERY_WEIGHT, COMMAND_SERVER_ID
+import networkx as nx
 
 
 class RelaySelector:
     """Selects relay nodes based on energy-weighted probabilities"""
     
-    def __init__(self):
+    def __init__(self, swarm=None):
+        self.swarm = swarm
         self.cooldown_penalty = COOLDOWN_PENALTY
         self.cooldown_duration = COOLDOWN_DURATION
         self.battery_weight = BATTERY_WEIGHT
@@ -81,13 +83,43 @@ class RelaySelector:
     def select_relay_chain(self, candidates: List, num_relays: int,
                            source_id: int = None) -> List:
         """
-        Select multiple relay nodes for multi-hop routing.
+        Select relay nodes using Weighted Shortest-Path (Dijkstra) for Energy Optimization.
+        Falls back to probabilistic selection if Dijkstra path fails or graph is absent.
         
         Args:
             candidates: List of Drone objects
-            num_relays: Number of relays needed
-            source_id: Source drone ID to exclude
+            num_relays: Maximum number of hops
+            source_id: Source drone ID
         """
+        if self.swarm is not None and self.swarm.network is not None and source_id is not None:
+            try:
+                # Use Dijkstra to find the shortest path based on edge 'weight'
+                path = nx.dijkstra_path(
+                    self.swarm.network, 
+                    source=source_id, 
+                    target=COMMAND_SERVER_ID, 
+                    weight='weight'
+                )
+                
+                # path includes source and COMMAND_SERVER_ID, we only want the relays in between
+                # and limit to num_relays
+                relay_ids = path[1:-1]
+                
+                # Filter relays to available candidates
+                chain = []
+                cand_ids = {c.drone_id: c for c in candidates}
+                for rid in relay_ids[:num_relays]:
+                    if rid in cand_ids:
+                        chain.append(cand_ids[rid])
+                
+                # if successful path found
+                if chain:
+                    return chain
+            except nx.NetworkXNoPath:
+                # Fallback if no path
+                pass
+                
+        # --- Fallback to probabilistic logic ---
         exclude_ids = [source_id] if source_id is not None else []
         chain = []
         

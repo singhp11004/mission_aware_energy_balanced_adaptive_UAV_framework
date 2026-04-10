@@ -185,3 +185,59 @@ class MissionManager:
             MissionPhase.THREAT: 0.5  # Shorter, high-intensity
         }
         return factors[self.privacy.current_phase]
+
+
+# ─────────────────────── Z-MAPS Extensions ───────────────────────
+
+# Multipath toggle per legacy phase
+PHASE_MULTIPATH = {
+    MissionPhase.PATROL: False,
+    MissionPhase.SURVEILLANCE: True,
+    MissionPhase.THREAT: True,
+}
+
+
+def should_use_multipath(phase: str) -> bool:
+    """Check if multipath routing should be active for the given phase."""
+    return PHASE_MULTIPATH.get(phase, False)
+
+
+# Semantic priority for data content (keyword-based heuristic)
+_PRIORITY_KEYWORDS = {
+    "target": 0.95,
+    "hostile": 0.90,
+    "alert": 0.90,
+    "emergency": 0.95,
+    "threat": 0.85,
+    "video": 0.60,
+    "image": 0.55,
+    "surveillance": 0.65,
+    "battery": 0.30,
+    "status": 0.25,
+    "telemetry": 0.35,
+    "position": 0.30,
+}
+
+
+def get_priority_for_data_type(payload: str, phase: str = "PATROL") -> float:
+    """
+    Assign a priority score (0.0–1.0) to a payload based on its content
+    and the current mission phase.
+
+    Used by the Prioritization layer for backward-compatible code paths.
+    """
+    lower = payload.lower()
+    base = 0.3  # default
+
+    for keyword, score in _PRIORITY_KEYWORDS.items():
+        if keyword in lower:
+            base = max(base, score)
+            break
+
+    # Phase amplifier
+    phase_amp = {
+        MissionPhase.PATROL: 1.0,
+        MissionPhase.SURVEILLANCE: 1.15,
+        MissionPhase.THREAT: 1.30,
+    }
+    return min(1.0, base * phase_amp.get(phase, 1.0))

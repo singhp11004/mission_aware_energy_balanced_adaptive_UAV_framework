@@ -1,6 +1,6 @@
 # UAV Swarm Privacy Framework - Workflow & Procedure
 
-This document provides a step-by-step guide to setting up, configuring, and running the Mission-Aware Energy-Balanced Adaptive Privacy Framework simulation.
+This document provides a step-by-step guide to setting up, configuring, and running the Mission-Aware Energy-Balanced Adaptive Privacy Framework (Z-MAPS).
 
 ## 1. Prerequisites
 
@@ -40,64 +40,56 @@ pip install -r requirements.txt
 
 ## 3. Running the Simulation
 
-To execute the simulation, run the `main.py` script:
+The system enforces a 4-layer Z-MAPS functional architecture strictly isolated from monolithic testing wrappers. To execute the framework evaluation:
 
 ```bash
-python3 main.py
+python3 main.py --mode eval --rounds 100
 ```
 
 ### Expected Output
-The simulation will print progress to the console, including:
+The framework generates operational metrics continuously:
 
-1.  **Initialization**: Setting up the swarm, energy models, and privacy controllers.
-2.  **Round Progression**: Updates every 10 rounds showing:
-    - Active drone count
-    - Average battery level
-    - Current mission phase (e.g., PATROL, SURVEILLANCE, THREAT)
-3.  **Phase Transitions**: Notifications when the mission phase changes.
-4.  **Final Report**: A comprehensive summary of:
-    - Statistics (Total messages, efficiency, etc.)
-    - Privacy Analysis (Trace attempts vs. successes)
-    - Relay Fairness
-    - Verification of graph generation.
+1.  **Initialization**: Sets up the IPPO models, establishes Cryptography engines, and constructs Dijkstra route mappings through $P \cdot d^2$ signal decay constraints.
+2.  **Round Progression**: Updates every 10 rounds detailing:
+    - Active drone operational capability
+    - Average battery level persistence
+    - Operational lifecycle phase routing
+3.  **Final Telemetry Report**: The system culminates with a delivery summary:
+    - Network packet chunking volumes
+    - Trace rates representing adversary evasion successes
+    - Multipath deployment utilization against baseline IPPO-DM logic
 
-## 4. Running the Interactive Dashboard
+## 4. IPPO-DM Training Mode
 
-For a visual, real-time experience:
+To engage the Independent Proximal Policy Optimization network generator directly:
 
 ```bash
-streamlit run app.py
+python3 main.py --mode train --drones 50 --seed 42
 ```
-
-This will launch a web interface where you can:
--   Watch the swarm operate in **God Mode** or **Adversary Mode**.
--   Trigger events like **Decoy Deployment** and **EMP Blasts**.
--   Monitor real-time metrics for privacy and energy.
+This triggers parameter-shared Actor-Critic updates based on Dirichlet policy derivations, updating localized `.pt` checkpoint weights.
 
 ## 5. Configuration
 
-Project settings can be modified in `config.py`. Key parameters include:
+Project settings can be fundamentally altered in `config.py`. Core configurable structures:
 
-- **NUM_DRONES**: Total number of UAVs in the swarm (Default: 50).
-- **SIMULATION_ROUNDS**: Total duration of the simulation (Default: 100).
-- **MESSAGES_PER_ROUND**: Number of messages generated per round.
-- **PHASE_CHANGE_INTERVAL**: How often the mission phase updates.
+- **NUM_DRONES**: Total number of UAVs within the network topology (Default: 50).
+- **SIMULATION_ROUNDS**: Base iteration counter duration (Default: 100).
+- **MESSAGES_PER_ROUND**: Volume of simultaneous transmission demands generated per round matrix.
+- **PHASE_CHANGE_INTERVAL**: Iterations required before shifting operational profiles (e.g. `TRANSIT` -> `PATROL`).
 
 ## 6. Outputs & Visualization
 
-Upon completion, the simulation generates results in the `outputs/` directory.
+Upon completion, all execution outcomes establish graphical traces in the `outputs/` directory dynamically.
 
 ### Generated Graphs
-- **Battery Distribution**: Histogram of remaining battery levels.
-- **Privacy vs. Energy**: Scatter plot showing the trade-off between privacy cost and energy consumption.
-- **Trace Success**: Line graph of adversary success rates over time/phases.
-- **Swarm Lifetime**: Active drone count over simulation rounds.
-- **Relay Fairness**: Bar chart of message relay distribution among drones.
-- **Latency by Phase**: Bar chart comparing communication delay across different privacy levels.
-- **Traffic Composition**: Stacked area chart visualising the ratio of real vs. dummy noise traffic.
-- **Energy Consumption Rate**: Bar chart showing how fast battery drains in each mission phase.
+- **Battery Distribution**: Remaining battery capability distributions across the node geometry.
+- **Privacy vs. Energy**: Scatter plot isolating the statistical efficiency vs computational payload constraints.
+- **Trace Success**: Adversary evasion trends representing layer-3 obfuscation stability boundaries.
+- **Swarm Lifetime**: Core connectivity timeline stability maps.
+- **Latency by Phase**: Phase transit speed analyses representing Dijkstra pathing complexities.
+- **Traffic Composition**: Dummy density and noise-padding distribution layers.
 
-## 7. Interpreting Results
+## 7. Interpreting Expected Deliverables
 
-- **Trace Success Rate**: A lower trace success rate indicates better privacy.
-- **0% Trace Success**: In high-security phases (like `THREAT`), it is expected to see **0% trace success**. This means the privacy measures (5-hop routing, dummy traffic, jitter) were sufficient to reduce the adversary's confidence below their actionable threshold. It does **not** mean the simulation is broken; it means the defense is working.
+- **Trace Success Rate**: Traces actively evaluate the multi-vector analytical engines against our obfuscation. Values below 30% signify near-total success scaling across heavy surveillance regimes.
+- **Delivery Stability**: Representing X448 validation ratios and core edge traversals mapping properly across dynamic routing changes.

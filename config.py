@@ -25,11 +25,22 @@ ENERGY_SIGNING = 0.06           # Ed25519 signing
 ENERGY_HASHING = 0.005          # SHA-3 hashing
 ENERGY_CHACHA20 = 0.10          # ChaCha20 (lighter than AES)
 
-# Mission Phases
+# Mission Phases  (legacy 3-phase — still used by simulation_engine / app)
 class MissionPhase:
     PATROL = "PATROL"
     SURVEILLANCE = "SURVEILLANCE"
     THREAT = "THREAT"
+
+
+# Operational Phases (Z-MAPS 5-phase lifecycle)
+class OperationalPhase:
+    TRANSIT = "TRANSIT"
+    PATROL = "PATROL"
+    SURVEILLANCE = "SURVEILLANCE"
+    ENGAGEMENT = "ENGAGEMENT"   # replaces THREAT conceptually
+    RECOVERY = "RECOVERY"
+
+    ALL = ["TRANSIT", "PATROL", "SURVEILLANCE", "ENGAGEMENT", "RECOVERY"]
 
 # Privacy Parameters per Mission Phase
 MISSION_CONFIG = {
@@ -56,13 +67,13 @@ MISSION_CONFIG = {
 # Cryptographic Configuration per Mission Phase
 CRYPTO_CONFIG = {
     MissionPhase.PATROL: {
-        "cipher": "AES-256-GCM",
+        "cipher": "XChaCha20-Poly1305",
         "hmac": False,
         "sign": False,
-        "description": "Standard authenticated encryption",
+        "description": "Extended-nonce authenticated encryption",
     },
     MissionPhase.SURVEILLANCE: {
-        "cipher": "AES-256-GCM",
+        "cipher": "XChaCha20-Poly1305",
         "hmac": True,
         "sign": True,
         "description": "Full auth + integrity + signatures",
@@ -91,3 +102,35 @@ PHASE_CHANGE_INTERVAL = 30  # Rounds between phase changes
 
 # Output Configuration
 OUTPUT_DIR = "outputs"
+
+# ─────────────────────── Z-MAPS IPPO-DM Hyperparameters ───────────────────────
+
+IPPO_HPARAMS = {
+    "obs_dim": 32,             # observation vector length per drone
+    "hidden_1": 128,           # first hidden layer
+    "hidden_2": 64,            # second hidden layer
+    "max_paths": 4,            # maximum parallel next-hop paths
+    "lr": 3e-4,                # learning rate
+    "gamma": 0.99,             # discount factor
+    "gae_lambda": 0.95,        # GAE lambda
+    "clip_eps": 0.2,           # PPO clip epsilon
+    "entropy_coeff": 0.01,     # Dirichlet entropy bonus weight
+    "value_coeff": 0.5,        # value loss weight
+    "max_grad_norm": 0.5,      # gradient clipping
+    "ppo_epochs": 4,           # PPO epochs per update
+    "mini_batch_size": 32,     # mini-batch size
+}
+
+# ─────────────────────── Multipath Routing ───────────────────────
+
+ENERGY_MULTIPATH_OVERHEAD = 0.02   # extra energy per additional path (coordination cost)
+DEFAULT_CHECKPOINT_PATH = "outputs/checkpoints/ippo_final.pt"
+
+# ─────────────────────── RL Reward Weights ───────────────────────
+
+REWARD_WEIGHTS = {
+    "delivery": 1.0,
+    "energy": 0.3,
+    "trace": 0.5,
+    "balance": 0.2,
+}

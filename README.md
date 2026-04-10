@@ -1,104 +1,118 @@
-# Mission-Aware Energy-Balanced Adaptive Privacy Framework
+# Z-MAPS: Zero-Knowledge Multi-Agent RL Framework for Mission-Aware Privacy
 
-A Python-based simulation environment for modeling secure communication in UAV (Unmanned Aerial Vehicle) swarms. The framework adaptively balances privacy protection against energy consumption based on current mission threat levels.
+> A layered, reinforcement-learning-driven framework for secure UAV swarm communication that dynamically balances privacy protection against energy consumption using **Independent Proximal Policy Optimization with Dirichlet Modeling (IPPO-DM)** for traffic-adaptive multipath routing.
+
+---
 
 ## 📌 Project Overview
 
-### The Need
-In critical missions (military surveillance, disaster relief, border security), UAV swarms must transmit sensitive telemetry without revealing their locations to adversaries. Traditional encryption protects the *content* of messages but not the *traffic patterns*. An adversary analyzing traffic flow (Traffic Analysis) can trace the source of a transmission, endangering the UAV.
+### The Problem
+In critical missions (military surveillance, disaster relief, border security), UAV swarms must transmit sensitive telemetry without revealing locations to adversaries. Traditional encryption protects message *content* but not *traffic patterns*. An adversary analyzing traffic flow can trace message sources, endangering the swarm.
 
-Protecting against traffic analysis requires expensive measures like multi-hop routing and dummy traffic injection, which drain battery life. A static high-security approach would ground the swarm too quickly.
+Protecting against traffic analysis requires expensive measures like multi-hop routing and dummy traffic injection, which drain battery life. A static high-security approach grounds the swarm too quickly. Existing multi-hop networks suffer from **single-path bottlenecks** that cause congestion and detectable timing signatures.
 
-### The Solution
-This project implements a **Mission-Aware Framework** that dynamically adjusts privacy parameters.
-- **Low Threat (PATROL)**: Minimal protection to conserve energy.
-- **High Threat (THREAT)**: Maximum protection (deep routing, high noise) to ensure survival, even at high energy cost.
+### The Solution: Z-MAPS
+This framework implements a **4-layer mission-centric architecture** with **RL-driven multipath routing** and optimized logical constructs:
 
----
-
-## ⚙️ Core Processes & Methodology
-
-### 1. Adaptive Privacy Controller (`privacy_controller.py`)
-The system monitors the mission phase and adjusts three key privacy mechanisms:
--   **Routing Depth (Hops)**: The number of intermediate relays a message must pass through.
-    -   *Patrol*: 2 hops.
-    -   *Threat*: 5 hops (much harder to trace).
--   **Dummy Traffic Injection**: Fake messages sent to confuse traffic analysis.
-    -   *Patrol*: 10% rate.
-    -   *Threat*: 50% rate (creates a "fog of war").
--   **Timing Jitter**: Random delays introduced to disrupt timing correlation attacks.
-
-### 2. Energy-Aware Operations (`energy_model.py`)
-Every action consumes battery. The framework models the cost of:
--   **Transmission**: Varies by distance and number of hops.
--   **Encryption/Decryption**: Computation cost.
--   **Dummy Traffic**: The "price of privacy."
--   **Relaying**: Energy cost for helping other drones.
-
-Detailed battery physics, including critical-level efficiency penalties, are simulated.
-
-### 3. Adversary Simulation (`adversary.py`)
-A simulated "Global Passive Adversary" observes all network traffic.
--   **Traffic Analysis**: Correlates message timing and hop counts to guess the source.
--   **Trace Success**: The adversary succeeds if they can identify the sender with >70% confidence.
--   **Goal**: The framework aims to keep this success rate at **0%** during high-threat phases.
-
-### 4. Swarm Intelligence (`swarm.py` & `relay_selector.py`)
--   **Decentralized Routing**: Drones select relays based on connectivity and battery levels.
--   **Load Balancing**: Ensures no single drone is exhausted by relay duties (verified by Gini coefficient metrics).
+| Layer | Name | Responsibility |
+|:---:|:---|:---|
+| **L1** | Data Acquisition | Noise-Free Random Chunk Segmentation (50-1000B), Data classification |
+| **L2** | Prioritization | Semantic analysis, priority scoring, privacy envelope recommendation |
+| **L3** | Communication | IPPO-DM Multipath, Dijkstra ($P \cdot d^2$) Weighted Transits, Dummy Noise |
+| **L4** | TOC Integration | Command server delivery, ACK processing |
 
 ---
 
-## 🚀 Use Cases
+## 🚀 Advanced Project Upgrades
 
-1.  **Military Reconnaissance**: UAVs patrolling a hostile border. When an enemy radar is detected (Phase: THREAT), the swarm switches to high-privacy mode to prevent the enemy from locating the patrol.
-2.  **Dissident/Journalist Protection**: Secure communication networks in oppressive regimes where physical location tracing is a threat.
-3.  **Critical Infrastructure Monitoring**: Protecting the location of sensitive sensors monitoring pipelines or power grids from sabotage.
+### 1. Quantum-Resistant Cryptography
+Primitives scaling to match deep surveillance threat models optimally:
+- **Key Exchange:** Transitioned from ECDH (P-256) to **X448**, achieving bleeding-edge session capabilities natively optimized against intercept algorithms.
+- **Signatures:** Stepped from `Ed25519` to **Ed448** yielding superior resistance buffers.
+- **Hashing Infrastructure:** Transitioned standard telemetry loops across natively from `SHA3-256` up to **SHA3-512**.
+
+### 2. $P \cdot d^2$ Dijkstra Routing
+Next-hop relay chaining avoids probabilistic mapping via deterministic routing logic. Swarm topologies continually reassess logical edge weights based on inverse square transmission costs and normalized battery decay metrics, processed globally by `networkx` (`nx.dijkstra_path`).
+
+### 3. Noise-Free Random Segmentation
+Layer 1 dynamically restricts monolithic payload transit behavior by stripping string constraints into independent chunk fragments scaled identically between 50 and 1000 bytes. This creates powerful observability decoupling under IPPO boundaries without bleeding battery resources into empty "dummy noise padding" parameters.
 
 ---
 
-## 📊 Results Achieved
+## 🧠 IPPO-DM: Traffic-Adaptive Multipath Routing
 
-The simulation consistently demonstrates the effectiveness of the adaptive approach:
+The core research contribution replaces single-path relay chains with **learned traffic splitting** using PPO + Dirichlet modeling.
 
-| Mission Phase | Privacy Level | Trace Success | Energy Cost | Result Interpretation |
-| :--- | :--- | :--- | :--- | :--- |
-| **PATROL** | Low | ~91% | Low | Adversary can trace easy targets, but swarm saves battery for long duration. |
-| **SURVEILLANCE** | Medium | ~60-80% | Medium | Balanced approach. |
-| **THREAT** | **Maximum** | **0%** | **High** | **Perfect Defense.** The adversary is completely blinded by dummy traffic and deep routing. |
+### How It Works
+1. Each drone runs a **parameter-shared Actor-Critic network** that observes local state.
+2. The **actor head** outputs Dirichlet concentration parameters via `softplus+1`.
+3. **Sampling from the Dirichlet** yields continuous split ratios `α = (α₁, …, αₖ)`.
+4. Traffic is **forwarded in parallel** across `k` next-hop relay chains mapping deterministically via Dijkstra constraints.
 
-> **Note**: A "0% Trace Success" in THREAT mode is a **positive result**. It means the defense mechanisms successfully prevented the adversary from identifying the source.
+---
+
+## 🔄 5-Phase Operational Lifecycle
+
+| Phase | Threat | Routing | Multipath | Dummy Rate | Cipher |
+|:---|:---:|:---:|:---:|:---:|:---|
+| 🚁 **TRANSIT** | 0.1 | 1 hop | ✗ | 5% | XChaCha20-Poly1305 |
+| 🟢 **PATROL** | 0.25 | 2 hops | ✗ | 10% | XChaCha20-Poly1305 |
+| 🟡 **SURVEILLANCE** | 0.55 | 3 hops | ✓ (2-path) | 30% | XChaCha20-Poly1305 + HMAC + Ed448 |
+| 🔴 **ENGAGEMENT** | 0.95 | 5 hops | ✓ (3-path) | 50% | ChaCha20-Poly1305 + HMAC + Ed448 |
+| 🔵 **RECOVERY** | 0.35 | 2 hops | ✓ (2-path) | 15% | XChaCha20-Poly1305 + HMAC |
 
 ---
 
 ## 🛠️ How to Run
 
-1.  **Clone the repository**.
-2.  **Install dependencies**:
-    ```bash
-    pip install -r requirements.txt
-    ```
-3.  **Run the simulation**:
-    ```bash
-    python3 main.py
-    ```
-4.  **View Results**: Check the console output and the `outputs/` directory for generated graphs.
+### Prerequisites
+```bash
+pip install -r requirements.txt
+```
 
-## 🎮 Interactive Dashboard (New!)
+### Z-MAPS Core Evaluation Engine 
+```bash
+python main.py --mode eval               # uses trained IPPO if available
+python main.py --mode eval --checkpoint outputs/checkpoints/ippo_final.pt
+```
 
-Experience the simulation in real-time with our "Mission Control" dashboard.
+### Train the IPPO-DM Agent
+```bash
+python train_ippo.py                     # full training (500 episodes)
+python train_ippo.py --episodes 100      # quick training
+```
 
-1.  **Install additional dependencies**:
-    ```bash
-    pip install -r requirements.txt
-    ```
-2.  **Launch the dashboard**:
-    ```bash
-    streamlit run app.py
-    ```
-3.  **Features**:
-    *   **Twin Perspectives**: Toggle between *God Mode* (full visibility) and *Adversary Mode* (intercepted traffic).
-    *   **Active Countermeasures**: Deploy decoys or trigger EMP blasts to save the swarm.
-    *   **Real-time Telemetry**: Watch the adversary's confidence score rise and fall.
+---
 
-For a detailed step-by-step guide, see [WORKFLOW.md](WORKFLOW.md).
+## 📁 Project Structure
+
+```
+├── main.py                  # CLI entry point Evaluation/Training driver
+├── train_ippo.py            # Standalone IPPO-DM training script
+├── config.py                # Core constants and Hyperparameters
+│
+├── zmaps/                   # Z-MAPS Modular Package
+│   ├── layers/              # The 4-Layer Architecture (L1-L4)
+│   ├── mission/             # 5-Phase lifecycle and profile thresholds
+│   └── routing/             # Custom IPPO-DM implementations
+│
+├── swarm.py                 # Topology, Edge computations, Drone state classes
+├── energy_model.py          # Cost metrics scaling battery drain tracking
+├── crypto_engine.py         # X448, Ed448, SHA3-512 backend hooks
+├── adversary.py             # Heuristic traffic correlation modeling
+├── privacy_controller.py    # Dummy and Jitter logic controllers
+├── relay_selector.py        # Dijkstra topology navigation
+└── metrics.py               # Visuals / performance graphing
+```
+
+---
+
+## 📚 References
+
+- **IPPO-DM**: Independent PPO with Dirichlet Modeling for multi-agent traffic splitting on the probability simplex
+- **Mission-Centric Layered Architecture**: Data Acquisition → Prioritization → Communication → TOC Integration
+- **Privacy-Energy Profiles**: Phase-specific parameter sets balancing security requirements against battery constraints
+
+---
+
+*Z-MAPS: Zero-Knowledge Multi-Agent Reinforcement Learning Framework for Mission-Aware Privacy*
