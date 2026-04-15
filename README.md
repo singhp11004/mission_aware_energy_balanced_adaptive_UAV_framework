@@ -84,6 +84,19 @@ python train_ippo.py --episodes 100      # quick training
 
 ---
 
+## 📖 Complete Documentation Index
+
+To explore the exact engineering details behind this multi-agent framework, please review our comprehensive module documentations:
+
+*   **[EXPLANATION.md](EXPLANATION.md)** — High-level logic overview and the 4-layer tactical stack.
+*   **[WORKFLOW.md](WORKFLOW.md)** — Environment setup and terminal execution arguments.
+*   **[ARCHITECTURE.md](ARCHITECTURE.md)** — Swarm topology setup, agent configurations, and adversarial tracking environments.
+*   **[CRYPTOGRAPHY.md](CRYPTOGRAPHY.md)** — Advanced phase-adaptive encryption logic (X448, XChaCha20, Ed448, SHA3).
+*   **[IPPO_DM.md](IPPO_DM.md)** — Machine learning logic covering the Actor-Critic shared policies and Dirichlet modeling constraint sets.
+*   **[ROUTING_AND_ENERGY.md](ROUTING_AND_ENERGY.md)** — The physics constraints behind trajectory mapping, energy depletion logic, and noise-free fragmentation.
+
+---
+
 ## 📁 Project Structure
 
 ```
